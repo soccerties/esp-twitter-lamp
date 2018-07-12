@@ -1,4 +1,4 @@
-# twitter-esp-lamp
+# esp-twitter-lamp
 ESP8266 based smart lamp which searches Twitter and flashes different colors depending on tweets.
 
 ## Lamp Usage
