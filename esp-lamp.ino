@@ -9,6 +9,8 @@
 #include <TwitterWebAPI.h>
 #include <NTPClient.h>
 #include <WiFiUdp.h>
+#include <Ticker.h>
+#include <DoubleResetDetector.h>
 
 // user options
 int redPin = 14;
@@ -17,9 +19,9 @@ int bluePin = 15;
 int period = 5000; // fade in fade out period
 String currentColor = "white"; // starting LED color
 static char const twitterSearchString[] = "mongo OR cassandra OR dse OR datastax";
-unsigned long twi_update_interval = 20; // seconds
+unsigned long twitter_update_interval = 20; // seconds
 
-// twitter auth tokens can be created here https://apps.twitter.com/app/new
+// twitter auth
 static char const consumer_key[]    = "";
 static char const consumer_sec[]    = "";
 static char const accesstoken[]     = "";
@@ -28,73 +30,90 @@ static char const accesstoken_sec[] = "";
 const char *ntp_server = "pool.ntp.org";
 int timezone = -7;
 
-int value;  // fade value holder
+int brightness = 750;
 
-unsigned long api_mtbs = twi_update_interval * 1000; //mean time between api requests
-unsigned long api_lasttime = 0; 
-
+bool CHECK_TWITTER = false;
+Ticker tick;
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, ntp_server, timezone*3600, 60000);  // NTP server pool, offset (in seconds), update interval (in milliseconds)
 TwitterClient tcr(timeClient, consumer_key, consumer_sec, accesstoken, accesstoken_sec);
 
+// Number of seconds after reset during which a
+// subseqent reset will be considered a double reset.
+#define DRD_TIMEOUT 5
+
+// RTC Memory Address for the DoubleResetDetector to use
+#define DRD_ADDRESS 0
+
+DoubleResetDetector drd(DRD_TIMEOUT, DRD_ADDRESS);
+
 void setup() {
   Serial.begin(115200);
   pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, HIGH);
-  setColor(750, 750, 750);
+  // Turn on built in LED until wifi is setup
+  digitalWrite(LED_BUILTIN, LOW);
+  updateLed();
 
   WiFiManager wifiManager;
-  wifiManager.autoConnect("esp-lamp");
+
+  if (drd.detectDoubleReset()) {
+    Serial.println("Double Reset Detected, erasing wifi configs");
+    wifiManager.resetSettings();
+  }
+
+  // 3 min wifi setup timeout
+  wifiManager.setTimeout(180);
+
+  if (wifiManager.autoConnect("esp-lamp")) {
+    tcr.startNTP();
+    tick.attach(twitter_update_interval, checkTwitter);
+    digitalWrite(LED_BUILTIN, HIGH);
+  } else {
+    Serial.println("Timed out waiting for wifi setup");
+  }
 
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
-  
-  tcr.startNTP();
 }
 
 void loop() {
-  // calculate LED brightness 
-  int value = 500+400*cos(2*PI/period*millis());
-  
-  if (currentColor == "red") {
-    setColor(value, 0, 0);  
-  } else if (currentColor == "green") {
-    setColor(0, value, 0);
-  } else if (currentColor == "blue") {
-    setColor(0, 0, value);
-  } else if (currentColor == "white") {
-    setColor(value, value, value);
+  // calculate LED brightness
+  brightness = 500+400*cos(2*PI/period*millis());
+
+  if (CHECK_TWITTER) {
+    searchTwitter();
+    CHECK_TWITTER = false;
   }
 
-  // skip API call if less than interval
-  if (millis() > api_lasttime + api_mtbs) {
-    digitalWrite(LED_BUILTIN, LOW);
-    String tmsg = tcr.searchTwitter(twitterSearchString);
-    Serial.println(tmsg);
-    
-    String foundtweet = parseJSON(tmsg);
-    foundtweet.toLowerCase();
-    Serial.println(foundtweet);
-    
-    if(foundtweet.indexOf("mongo") >= 0) {
-      Serial.println("found Mongo!");
-      currentColor = "green";
-    } else if (foundtweet.indexOf("cassandra") >= 0){
-      Serial.println("found Cassandra!");
-      currentColor = "blue";
-    } else if (foundtweet.indexOf("dse") >= 0 || foundtweet.indexOf("datastax") >= 0) {
-      Serial.println("found Datastax!");
-      currentColor = "red";
-    } else {
-      Serial.println("nothing found in tweet");
-      currentColor = "white";
-    }
-    api_lasttime = millis();
-  }
-  
+  updateLed();
   yield();
   delay(20);
-  digitalWrite(LED_BUILTIN, HIGH);
+}
+
+void checkTwitter() {
+  CHECK_TWITTER = true;
+}
+
+String searchTwitter() {
+  String tmsg = tcr.searchTwitter(twitterSearchString);
+  Serial.println(tmsg);
+
+  String foundtweet = parseJSON(tmsg);
+  foundtweet.toLowerCase();
+  Serial.println(foundtweet);
+
+  if(foundtweet.indexOf("mongo") >= 0) {
+    Serial.println("found Mongo!");
+    currentColor = "green";
+  } else if (foundtweet.indexOf("cassandra") >= 0){
+    Serial.println("found Cassandra!");
+    currentColor = "blue";
+  } else if (foundtweet.indexOf("dse") >= 0 || foundtweet.indexOf("datastax") >= 0) {
+    Serial.println("found Datastax!");
+    currentColor = "red";
+  } else {
+    Serial.println("nothing found in tweet");
+  }
 }
 
 String parseJSON(String msg) {
@@ -102,7 +121,7 @@ String parseJSON(String msg) {
   const char* msg2 = const_cast <char*> (msg.c_str());
   DynamicJsonBuffer jsonBuffer;
   JsonObject& response = jsonBuffer.parseObject(msg2);
-  
+
   if (!response.success()) {
     return "No tweet found";
   }
@@ -120,10 +139,20 @@ String parseJSON(String msg) {
   }
 }
 
-void setColor(int red, int green, int blue) {
-  analogWrite(redPin, red);
-  analogWrite(greenPin, green);
-  analogWrite(bluePin, blue);  
+void updateLed() {
+  if (currentColor == "red") {
+    setLedColor(brightness, 0, 0);
+  } else if (currentColor == "green") {
+    setLedColor(0, brightness, 0);
+  } else if (currentColor == "blue") {
+    setLedColor(0, 0, brightness);
+  } else if (currentColor == "white") {
+    setLedColor(brightness, brightness, brightness);
+  }
 }
 
-
+void setLedColor(int red, int green, int blue) {
+  analogWrite(redPin, red);
+  analogWrite(greenPin, green);
+  analogWrite(bluePin, blue);
+}
