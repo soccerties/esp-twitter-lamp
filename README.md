@@ -27,7 +27,7 @@ Follow the steps to configure the lamp's Wifi settings. If configuration is not 
 ### Hardware
 
 **Components**
-- [NodeMCU 1.0 ESP8266 dev board](https://www.amazon.com/MakerFocus-ESP8266-NodeMcu-Wireless-Development/dp/B01N8UUE3L/ "NodeMCU 1.0 ESP8266 dev board")
+- [NodeMCU 1.0 ESP8266 dev board](https://www.amazon.com/gp/product/B07CB4P2XY/ "NodeMCU 1.0 ESP8266 dev board")
 - [Salt Lamp](https://www.amazon.com/gp/product/B0719MYVZ6/ "Salt Lamp")
 - [RGB LED](https://www.amazon.com/Tricolor-Multicolor-Lighting-Electronics-Components/dp/B01C19ENFK "RGB LED")
 - 3x 120 ohm resistors
