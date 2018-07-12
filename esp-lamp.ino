@@ -87,6 +87,7 @@ void loop() {
 
   updateLed();
   yield();
+  drd.loop();
   delay(20);
 }
 
