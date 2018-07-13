@@ -32,7 +32,7 @@ Follow the steps to configure the lamp's Wifi settings. If configuration is not 
 - [RGB LED](https://www.amazon.com/Tricolor-Multicolor-Lighting-Electronics-Components/dp/B01C19ENFK "RGB LED")
 - 3x 120 ohm resistors
 
-Dissamble the salt lamp and discard the included LED. Cut out a slot in the wooden base to install the ESP module into.
+Disassemble the salt lamp and discard the included LED. Cut out a slot in the wooden base to install the ESP module into.
 
 ![1](pics/1.jpg)
 
@@ -77,4 +77,4 @@ static char const accesstoken[]     = "";
 static char const accesstoken_sec[] = "";
 ```
 
-Then Compile and upload the sketch.
+Under the Tools menu make sure you select teh NodeMCU 1.0 board and the correct serial port. Then Compile and upload the sketch.
