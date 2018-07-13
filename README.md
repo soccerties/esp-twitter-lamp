@@ -1,6 +1,8 @@
 # esp-twitter-lamp
 ESP8266 based smart lamp which searches Twitter and flashes different colors depending on tweets. If the word Cassandra is found the lamp will flash blue. If MongoDB is found it will flash green. And if Datastax is found it will flash red.
 
+![8](pics/8.jpg)
+
 ## Lamp Usage
 The lamp has 3 states
 1. **Setup**
@@ -55,8 +57,6 @@ Reattach the top of the lamp. Now the lamp is ready for programming.
 ![6](pics/6.jpg)
 
 ![7](pics/7.jpg)
-
-![8](pics/8.jpg)
 
 ### Software
 **Requirements**
